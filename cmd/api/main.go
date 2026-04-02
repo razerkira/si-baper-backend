@@ -13,16 +13,23 @@ import (
 )
 
 func main() {
+	log.Println("🚀 [START] Aplikasi mulai dinyalakan...")
+
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Peringatan: File .env tidak ditemukan, menggunakan environment dari sistem cloud.")
+		log.Println("⚠️ [INFO] File .env tidak ditemukan (wajar di production).")
 	}
 
+	log.Println("⏳ [DB] Mencoba menghubungi database Aiven...")
 	config.ConnectDB()
+	log.Println("✅ [DB] Berhasil terhubung ke database!")
+
+	log.Println("⏳ [SEEDER] Menjalankan seeder...")
 	seeders.SeedRoles(config.DB)
 	seeders.SeedAdminUser(config.DB)
+	log.Println("✅ [SEEDER] Seeder selesai!")
 
-
+	log.Println("⏳ [ROUTER] Menyiapkan rute API...")
 	router := gin.Default()
 
 	router.Use(cors.New(cors.Config{
@@ -44,6 +51,6 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server berjalan di port %s", port)
+	log.Printf("🔥 [SERVER] Bersiap mendengarkan di port %s...", port)
 	router.Run(":" + port)
 }
