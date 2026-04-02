@@ -7,6 +7,7 @@ import (
 	"si-baper-backend/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/skip2/go-qrcode" // <-- Import library pembuat QR Code
 )
 
 type ItemInput struct {
@@ -53,22 +54,33 @@ func CreateItem(c *gin.Context) {
 		MinimumStock: input.MinimumStock,
 	}
 
+	// 1. Simpan data awal barang ke database
 	if err := tx.Create(&item).Error; err != nil {
-		tx.Rollback() 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan barang. Kode Barang unik atau Kategori valid."})
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan barang. Kode Barang mungkin sudah ada."})
 		return
 	}
 
-	qrCodeURL, err := utils.GenerateAndUploadQRCode(item.ItemCode)
+	// 2. Buat gambar QR Code (mengubah text ItemCode menjadi data gambar byte array)
+	pngData, err := qrcode.Encode(item.ItemCode, qrcode.Medium, 256)
 	if err != nil {
-		tx.Rollback() 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghasilkan QR Code: " + err.Error()})
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghasilkan gambar QR Code: " + err.Error()})
 		return
 	}
 
+	// 3. Unggah data gambar tersebut ke Cloudinary
+	qrCodeURL, err := utils.UploadQRCodeToCloudinary(item.ItemCode, pngData)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengunggah QR Code ke Cloudinary: " + err.Error()})
+		return
+	}
+
+	// 4. Simpan URL aman dari Cloudinary kembali ke database barang
 	item.QRCodeURL = qrCodeURL
 	if err := tx.Save(&item).Error; err != nil {
-		tx.Rollback() 
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan URL QR Code ke database"})
 		return
 	}
@@ -77,6 +89,6 @@ func CreateItem(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Barang dan QR Code berhasil ditambahkan!",
-		"data":    item, 
+		"data":    item,
 	})
 }
