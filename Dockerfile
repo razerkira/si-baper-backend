@@ -18,9 +18,6 @@ WORKDIR /app
 
 COPY --from=builder /app/server .
 
-COPY gcs-key.json .
-
-COPY .env .
 
 EXPOSE 8080
 
