@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-	"time" // <-- Tambahkan package time
+	"time" // <-- Package time untuk jebakan waktu
 
 	"si-baper-backend/config"
 	"si-baper-backend/routes"
@@ -29,14 +29,18 @@ func main() {
 
 	router := gin.Default()
 
-	// Pengaturan CORS
+	// --- PENGATURAN CORS (JURUS SAPU JAGAT) ---
+	// Menerima request dari domain apapun untuk mengatasi error CORS
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "https://si-baper.vercel.app"},
+		AllowOriginFunc: func(origin string) bool {
+			return true // Izinkan semua origin sementara waktu
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+	// ------------------------------------------
 
 	// Rute Root untuk memuaskan Health Check Back4App
 	router.GET("/", func(c *gin.Context) {
