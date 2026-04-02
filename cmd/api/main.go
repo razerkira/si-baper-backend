@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"os"
+	"time" // <-- Tambahkan package time
+
 	"si-baper-backend/config"
 	"si-baper-backend/routes"
 	"si-baper-backend/seeders"
@@ -13,7 +15,12 @@ import (
 )
 
 func main() {
-	log.Println("🚀 [START] Aplikasi dinyalakan...")
+	// --- JEBAKAN WAKTU ---
+	// Tahan aplikasi selama 3 detik agar sistem log Back4App sempat menyala dan merekam!
+	log.Println("========================================")
+	log.Println("🚀 [START] Aplikasi mulai dinyalakan...")
+	log.Println("========================================")
+	time.Sleep(3 * time.Second)
 
 	err := godotenv.Load()
 	if err != nil {
@@ -22,6 +29,7 @@ func main() {
 
 	router := gin.Default()
 
+	// Pengaturan CORS
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "https://si-baper.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -30,6 +38,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Rute Root untuk memuaskan Health Check Back4App
 	router.GET("/", func(c *gin.Context) {
 		c.String(200, "SI-BAPER API is UP and Running!")
 	})
@@ -40,6 +49,7 @@ func main() {
 
 	routes.SetupRoutes(router)
 
+	// --- TRIK GOROUTINE DENGAN TAMENG ANTI-CRASH ---
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -62,6 +72,7 @@ func main() {
 		port = "8080"
 	}
 
+	// BIND EKSPLISIT KE 0.0.0.0 AGAR DOCKER BISA MENGAKSESNYA DARI LUAR
 	log.Printf("🔥 [SERVER] Langsung membuka port %s...", port)
-	router.Run(":" + port)
+	router.Run("0.0.0.0:" + port)
 }
