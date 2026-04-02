@@ -22,7 +22,6 @@ func main() {
 
 	router := gin.Default()
 
-	// Pengaturan CORS
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "https://si-baper.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -31,7 +30,6 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Rute Root untuk memuaskan Health Check Back4App seketika
 	router.GET("/", func(c *gin.Context) {
 		c.String(200, "SI-BAPER API is UP and Running!")
 	})
@@ -40,12 +38,15 @@ func main() {
 		c.JSON(200, gin.H{"message": "pong!"})
 	})
 
-	// Daftarkan semua rute API utama
 	routes.SetupRoutes(router)
 
-	// --- TRIK GOROUTINE: JALANKAN DATABASE DI BACKGROUND ---
-	// Agar server bisa langsung membuka Port 8080 dalam 0.1 detik
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Println("🚨 [CRASH PREVENTED] Terjadi kegagalan saat inisialisasi:", r)
+			}
+		}()
+
 		log.Println("⏳ [DB] Menghubungkan ke Aiven secara asinkron...")
 		config.ConnectDB()
 		log.Println("✅ [DB] Terhubung ke Database Aiven!")
@@ -55,7 +56,6 @@ func main() {
 		seeders.SeedAdminUser(config.DB)
 		log.Println("✅ [SEEDER] Seeder Selesai!")
 	}()
-	// -------------------------------------------------------
 
 	port := os.Getenv("PORT")
 	if port == "" {
