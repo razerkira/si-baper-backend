@@ -69,19 +69,19 @@ func CreateItem(c *gin.Context) {
 		return
 	}
 
-	// 3. Unggah data gambar tersebut ke Cloudinary
-	qrCodeURL, err := utils.UploadQRCodeToCloudinary(item.ItemCode, pngData)
+	// 3. Unggah data gambar tersebut ke Local Storage VPS
+	qrCodePath, err := utils.SaveQRCodeLocally(item.ItemCode, pngData)
 	if err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengunggah QR Code ke Cloudinary: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan file QR Code di server lokal: " + err.Error()})
 		return
 	}
 
-	// 4. Simpan URL aman dari Cloudinary kembali ke database barang
-	item.QRCodeURL = qrCodeURL
+	// 4. Simpan path URL (contoh: /uploads/qrcodes/ITEM001.png) ke database barang
+	item.QRCodeURL = qrCodePath
 	if err := tx.Save(&item).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan URL QR Code ke database"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan path URL QR Code ke database"})
 		return
 	}
 

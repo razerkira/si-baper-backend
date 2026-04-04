@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-	"time" // <-- Package time untuk jebakan waktu
 
 	"si-baper-backend/config"
 	"si-baper-backend/routes"
@@ -15,25 +14,22 @@ import (
 )
 
 func main() {
-	// --- JEBAKAN WAKTU ---
-	// Tahan aplikasi selama 3 detik agar sistem log Back4App sempat menyala dan merekam!
 	log.Println("========================================")
-	log.Println("🚀 [START] Aplikasi mulai dinyalakan...")
+	log.Println("🚀 [START] Aplikasi SI-BAPER mulai dinyalakan...")
 	log.Println("========================================")
-	time.Sleep(3 * time.Second)
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("⚠️ [INFO] File .env tidak ditemukan (Production Mode).")
+		log.Println("⚠️ [INFO] File .env tidak ditemukan (Production Mode / Environment System).")
 	}
 
 	router := gin.Default()
 
 	// --- PENGATURAN CORS (JURUS SAPU JAGAT) ---
-	// Menerima request dari domain apapun untuk mengatasi error CORS
+	// Menerima request dari domain apapun agar Vercel bisa terhubung dengan mulus
 	router.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			return true // Izinkan semua origin sementara waktu
+			return true // Izinkan semua origin
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
@@ -42,15 +38,22 @@ func main() {
 	}))
 	// ------------------------------------------
 
-	// Rute Root untuk memuaskan Health Check Back4App
+	// --- RUTE STATIS UNTUK GAMBAR (SANGAT PENTING) ---
+	// Mengizinkan frontend mengakses folder uploads untuk melihat gambar QR Code
+	// Contoh akses: http://IP_VPS:8080/uploads/qrcodes/ITEM001.png
+	router.Static("/uploads", "./uploads")
+	// -------------------------------------------------
+
+	// Rute Root & Ping
 	router.GET("/", func(c *gin.Context) {
-		c.String(200, "SI-BAPER API is UP and Running!")
+		c.String(200, "SI-BAPER API is UP and Running on VPS!")
 	})
 
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong!"})
+		c.JSON(200, gin.H{"message": "pong! Server SI-BAPER Sehat."})
 	})
 
+	// Daftarkan semua rute API utama
 	routes.SetupRoutes(router)
 
 	// --- TRIK GOROUTINE DENGAN TAMENG ANTI-CRASH ---
@@ -61,9 +64,9 @@ func main() {
 			}
 		}()
 
-		log.Println("⏳ [DB] Menghubungkan ke Aiven secara asinkron...")
+		log.Println("⏳ [DB] Menghubungkan ke Database SI-BAPER (Local)...")
 		config.ConnectDB()
-		log.Println("✅ [DB] Terhubung ke Database Aiven!")
+		log.Println("✅ [DB] Berhasil terhubung ke Database SI-BAPER!")
 
 		log.Println("⏳ [SEEDER] Menjalankan seeder...")
 		seeders.SeedRoles(config.DB)
@@ -76,7 +79,7 @@ func main() {
 		port = "8080"
 	}
 
-	// BIND EKSPLISIT KE 0.0.0.0 AGAR DOCKER BISA MENGAKSESNYA DARI LUAR
-	log.Printf("🔥 [SERVER] Langsung membuka port %s...", port)
+	// BIND EKSPLISIT KE 0.0.0.0 AGAR BISA DIAKSES DARI INTERNET
+	log.Printf("🔥 [SERVER] Mendengarkan di port %s...", port)
 	router.Run("0.0.0.0:" + port)
 }
