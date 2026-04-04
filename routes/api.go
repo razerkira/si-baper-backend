@@ -35,19 +35,19 @@ func SetupRoutes(router *gin.Engine) {
 
 			items := protected.Group("/items")
 			{
-				items.GET("/", controllers.GetItems)
-				items.POST("/", controllers.CreateItem)
+				items.GET("", controllers.GetItems)    // <-- Hapus garis miring
+				items.POST("", controllers.CreateItem) // <-- Hapus garis miring
 			}
 
 			categories := protected.Group("/categories")
 			{
-				categories.GET("/", controllers.GetCategories)
-				categories.POST("/", controllers.CreateCategory)
+				categories.GET("", controllers.GetCategories)    // <-- Hapus garis miring
+				categories.POST("", controllers.CreateCategory)  // <-- Hapus garis miring
 			}
 
 			requests := protected.Group("/requests")
 			{
-				requests.POST("/", controllers.CreateRequest) 
+				requests.POST("", controllers.CreateRequest)     // <-- Hapus garis miring
 				requests.GET("/my-history", controllers.GetMyRequests) 
 			}
 
@@ -72,7 +72,7 @@ func SetupRoutes(router *gin.Engine) {
 				users.GET("/profile", controllers.GetMyProfile)
 				users.PUT("/profile", controllers.UpdateMyProfile)
 				
-				users.GET("/", controllers.GetAllUsers)
+				users.GET("", controllers.GetAllUsers) // <-- Hapus garis miring
 				users.GET("/roles", controllers.GetRoles)
 				users.PUT("/:id", controllers.UpdateUser)
 				users.DELETE("/:id", controllers.DeleteUser)
