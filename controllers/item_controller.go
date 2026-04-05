@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"fmt" // <-- Tambahkan import fmt untuk memformat teks string
 	"net/http"
 	"os"
 	"si-baper-backend/config"
@@ -63,15 +64,26 @@ func CreateItem(c *gin.Context) {
 		return
 	}
 
-	// 2. Buat gambar QR Code
-	pngData, err := qrcode.Encode(item.ItemCode, qrcode.Medium, 256)
+	// 2. Siapkan konten lengkap untuk QR Code
+	qrContent := fmt.Sprintf(
+		"Kode Barang: %s\nNama Barang: %s\nKategori ID: %d\nStok Saat Ini: %d %s\nBatas Minimum: %d %s\nDeskripsi: %s",
+		item.ItemCode,
+		item.Name,
+		item.CategoryID,
+		item.CurrentStock, item.Unit,
+		item.MinimumStock, item.Unit,
+		item.Description,
+	)
+
+	// 3. Buat gambar QR Code menggunakan konten lengkap
+	pngData, err := qrcode.Encode(qrContent, qrcode.Medium, 256)
 	if err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghasilkan gambar QR Code: " + err.Error()})
 		return
 	}
 
-	// 3. Unggah data gambar tersebut ke Local Storage VPS
+	// 4. Unggah data gambar tersebut ke Local Storage VPS
 	qrCodePath, err := utils.SaveQRCodeLocally(item.ItemCode, pngData)
 	if err != nil {
 		tx.Rollback()
@@ -79,7 +91,7 @@ func CreateItem(c *gin.Context) {
 		return
 	}
 
-	// 4. Simpan path URL ke database barang
+	// 5. Simpan path URL ke database barang
 	item.QRCodeURL = qrCodePath
 	if err := tx.Save(&item).Error; err != nil {
 		tx.Rollback()
@@ -113,34 +125,40 @@ func UpdateItem(c *gin.Context) {
 
 	tx := config.DB.Begin()
 
-	// 2. Cek apakah Kode Barang berubah. Jika ya, QR Code harus diperbarui.
-	if input.ItemCode != item.ItemCode {
-		// Hapus file QR Code lama
-		if item.QRCodeURL != "" {
-			_ = os.Remove(item.QRCodeURL) // Mengabaikan error jika file tidak ada
-		}
-
-		// Buat QR Code baru dengan ItemCode baru
-		pngData, err := qrcode.Encode(input.ItemCode, qrcode.Medium, 256)
-		if err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghasilkan gambar QR Code baru: " + err.Error()})
-			return
-		}
-
-		// Simpan QR Code baru ke Local Storage VPS
-		qrCodePath, err := utils.SaveQRCodeLocally(input.ItemCode, pngData)
-		if err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan file QR Code baru: " + err.Error()})
-			return
-		}
-		
-		// Update URL QR Code di model
-		item.QRCodeURL = qrCodePath
+	// 2. Hapus file QR Code lama (karena datanya pasti berubah, kita hapus dulu yang lama)
+	if item.QRCodeURL != "" {
+		_ = os.Remove(item.QRCodeURL) // Mengabaikan error jika file tidak ditemukan
 	}
 
-	// 3. Perbarui field lainnya
+	// 3. Siapkan konten lengkap yang BARU untuk QR Code
+	newQrContent := fmt.Sprintf(
+		"Kode Barang: %s\nNama Barang: %s\nKategori ID: %d\nStok Saat Ini: %d %s\nBatas Minimum: %d %s\nDeskripsi: %s",
+		input.ItemCode,
+		input.Name,
+		input.CategoryID,
+		input.CurrentStock, input.Unit,
+		input.MinimumStock, input.Unit,
+		input.Description,
+	)
+
+	// 4. Buat gambar QR Code baru
+	pngData, err := qrcode.Encode(newQrContent, qrcode.Medium, 256)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghasilkan gambar QR Code baru: " + err.Error()})
+		return
+	}
+
+	// 5. Simpan file QR Code baru ke Local Storage VPS
+	qrCodePath, err := utils.SaveQRCodeLocally(input.ItemCode, pngData)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan file QR Code baru: " + err.Error()})
+		return
+	}
+
+	// 6. Perbarui semua field barang
+	item.QRCodeURL = qrCodePath
 	item.CategoryID = input.CategoryID
 	item.ItemCode = input.ItemCode
 	item.Name = input.Name
@@ -149,7 +167,7 @@ func UpdateItem(c *gin.Context) {
 	item.CurrentStock = input.CurrentStock
 	item.MinimumStock = input.MinimumStock
 
-	// 4. Simpan perubahan ke database
+	// 7. Simpan perubahan ke database
 	if err := tx.Save(&item).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui data barang. Pastikan Kode Barang unik."})
