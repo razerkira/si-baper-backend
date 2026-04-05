@@ -1,3 +1,4 @@
+// src/models/item.go
 package models
 
 import "time"

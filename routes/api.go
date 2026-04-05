@@ -1,8 +1,9 @@
+// src/routes/api.go
 package routes
 
 import (
 	"si-baper-backend/controllers"
-	"si-baper-backend/middlewares" 
+	"si-baper-backend/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,7 +11,6 @@ import (
 func SetupRoutes(router *gin.Engine) {
 	api := router.Group("/api")
 	{
-		
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", controllers.Register)
@@ -18,7 +18,7 @@ func SetupRoutes(router *gin.Engine) {
 		}
 
 		protected := api.Group("/")
-		protected.Use(middlewares.RequireAuth()) 
+		protected.Use(middlewares.RequireAuth())
 		{
 			protected.GET("/profile", func(c *gin.Context) {
 				userID, _ := c.Get("user_id")
@@ -35,26 +35,28 @@ func SetupRoutes(router *gin.Engine) {
 
 			items := protected.Group("/items")
 			{
-				items.GET("", controllers.GetItems)    // <-- Hapus garis miring
-				items.POST("", controllers.CreateItem) // <-- Hapus garis miring
+				items.GET("", controllers.GetItems)
+				items.POST("", controllers.CreateItem)
+				items.PUT("/:id", controllers.UpdateItem)
+				items.DELETE("/:id", controllers.DeleteItem)
 			}
 
 			categories := protected.Group("/categories")
 			{
-				categories.GET("", controllers.GetCategories)    // <-- Hapus garis miring
-				categories.POST("", controllers.CreateCategory)  // <-- Hapus garis miring
+				categories.GET("", controllers.GetCategories)
+				categories.POST("", controllers.CreateCategory)
 			}
 
 			requests := protected.Group("/requests")
 			{
-				requests.POST("", controllers.CreateRequest)     // <-- Hapus garis miring
-				requests.GET("/my-history", controllers.GetMyRequests) 
+				requests.POST("", controllers.CreateRequest)
+				requests.GET("/my-history", controllers.GetMyRequests)
 			}
 
 			approvals := protected.Group("/approvals")
 			{
-				approvals.GET("/pending", controllers.GetPendingRequests) 
-				approvals.POST("/process", controllers.ProcessApproval)   
+				approvals.GET("/pending", controllers.GetPendingRequests)
+				approvals.POST("/process", controllers.ProcessApproval)
 			}
 
 			inventory := protected.Group("/inventory")
@@ -71,8 +73,8 @@ func SetupRoutes(router *gin.Engine) {
 			{
 				users.GET("/profile", controllers.GetMyProfile)
 				users.PUT("/profile", controllers.UpdateMyProfile)
-				
-				users.GET("", controllers.GetAllUsers) // <-- Hapus garis miring
+
+				users.GET("", controllers.GetAllUsers)
 				users.GET("/roles", controllers.GetRoles)
 				users.PUT("/:id", controllers.UpdateUser)
 				users.DELETE("/:id", controllers.DeleteUser)

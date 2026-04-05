@@ -1,13 +1,15 @@
+// src/controllers/item_controller.go
 package controllers
 
 import (
 	"net/http"
+	"os"
 	"si-baper-backend/config"
 	"si-baper-backend/models"
 	"si-baper-backend/utils"
 
 	"github.com/gin-gonic/gin"
-	"github.com/skip2/go-qrcode" // <-- Import library pembuat QR Code
+	"github.com/skip2/go-qrcode"
 )
 
 type ItemInput struct {
@@ -61,7 +63,7 @@ func CreateItem(c *gin.Context) {
 		return
 	}
 
-	// 2. Buat gambar QR Code (mengubah text ItemCode menjadi data gambar byte array)
+	// 2. Buat gambar QR Code
 	pngData, err := qrcode.Encode(item.ItemCode, qrcode.Medium, 256)
 	if err != nil {
 		tx.Rollback()
@@ -77,7 +79,7 @@ func CreateItem(c *gin.Context) {
 		return
 	}
 
-	// 4. Simpan path URL (contoh: /uploads/qrcodes/ITEM001.png) ke database barang
+	// 4. Simpan path URL ke database barang
 	item.QRCodeURL = qrCodePath
 	if err := tx.Save(&item).Error; err != nil {
 		tx.Rollback()
@@ -90,5 +92,100 @@ func CreateItem(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Barang dan QR Code berhasil ditambahkan!",
 		"data":    item,
+	})
+}
+
+func UpdateItem(c *gin.Context) {
+	itemID := c.Param("id")
+	var item models.Item
+
+	// 1. Cari barang di database
+	if err := config.DB.First(&item, itemID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Barang tidak ditemukan"})
+		return
+	}
+
+	var input ItemInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tx := config.DB.Begin()
+
+	// 2. Cek apakah Kode Barang berubah. Jika ya, QR Code harus diperbarui.
+	if input.ItemCode != item.ItemCode {
+		// Hapus file QR Code lama
+		if item.QRCodeURL != "" {
+			_ = os.Remove(item.QRCodeURL) // Mengabaikan error jika file tidak ada
+		}
+
+		// Buat QR Code baru dengan ItemCode baru
+		pngData, err := qrcode.Encode(input.ItemCode, qrcode.Medium, 256)
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghasilkan gambar QR Code baru: " + err.Error()})
+			return
+		}
+
+		// Simpan QR Code baru ke Local Storage VPS
+		qrCodePath, err := utils.SaveQRCodeLocally(input.ItemCode, pngData)
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan file QR Code baru: " + err.Error()})
+			return
+		}
+		
+		// Update URL QR Code di model
+		item.QRCodeURL = qrCodePath
+	}
+
+	// 3. Perbarui field lainnya
+	item.CategoryID = input.CategoryID
+	item.ItemCode = input.ItemCode
+	item.Name = input.Name
+	item.Description = input.Description
+	item.Unit = input.Unit
+	item.CurrentStock = input.CurrentStock
+	item.MinimumStock = input.MinimumStock
+
+	// 4. Simpan perubahan ke database
+	if err := tx.Save(&item).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui data barang. Pastikan Kode Barang unik."})
+		return
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Data barang berhasil diperbarui!",
+		"data":    item,
+	})
+}
+
+func DeleteItem(c *gin.Context) {
+	itemID := c.Param("id")
+	var item models.Item
+
+	if err := config.DB.First(&item, itemID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Barang tidak ditemukan"})
+		return
+	}
+
+	if err := config.DB.Delete(&item).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus barang dari database"})
+		return
+	}
+
+	if item.QRCodeURL != "" {
+		err := os.Remove(item.QRCodeURL)
+		if err != nil {
+			// fmt.Println("Gagal menghapus file fisik QR Code:", err)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Barang dan file QR Code berhasil dihapus!",
 	})
 }
