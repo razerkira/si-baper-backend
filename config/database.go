@@ -38,6 +38,7 @@ func ConnectDB() {
 		&models.RequestDetail{}, 
 		&models.Approval{},
 		&models.InventoryTransaction{},
+		&models.Submission{},
 	)
 
 	if err != nil {

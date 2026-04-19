@@ -79,6 +79,12 @@ func SetupRoutes(router *gin.Engine) {
 				users.PUT("/:id", controllers.UpdateUser)
 				users.DELETE("/:id", controllers.DeleteUser)
 			}
+			submissions := protected.Group("/submissions")
+			{
+				submissions.POST("", controllers.CreateSubmission)
+				submissions.GET("/my-history", controllers.GetMySubmissions)
+				submissions.GET("/all", controllers.GetAllSubmissions)
+			}
 		}
 	}
 }
