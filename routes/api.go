@@ -17,6 +17,18 @@ func SetupRoutes(router *gin.Engine) {
 			auth.POST("/login", controllers.Login)
 		}
 
+		// --- RUTE PUBLIK (Bisa diakses tanpa Login) ---
+		public := api.Group("/public")
+		{
+			// Mengambil data katalog untuk dropdown form publik
+			public.GET("/items", controllers.GetItems)
+
+			// Menerima form pengajuan/permintaan dengan input NIP manual
+			public.POST("/requests", controllers.CreatePublicRequest)
+			public.POST("/submissions", controllers.CreatePublicSubmission)
+		}
+		// ----------------------------------------------
+
 		protected := api.Group("/")
 		protected.Use(middlewares.RequireAuth())
 		{
@@ -79,6 +91,7 @@ func SetupRoutes(router *gin.Engine) {
 				users.PUT("/:id", controllers.UpdateUser)
 				users.DELETE("/:id", controllers.DeleteUser)
 			}
+			
 			submissions := protected.Group("/submissions")
 			{
 				submissions.POST("", controllers.CreateSubmission)
