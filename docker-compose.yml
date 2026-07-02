@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: sibaper-db-local
+    restart: always
+    environment:
+      POSTGRES_USER: sibaper_user
+      POSTGRES_PASSWORD: "46d.q.&RvSa7"
+      POSTGRES_DB: sibaper_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - sibaper-db-data:/var/lib/postgresql/data
+
+  api:
+    container_name: sibaper-api-local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db 
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  sibaper-db-data:

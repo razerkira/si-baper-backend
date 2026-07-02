@@ -1,3 +1,5 @@
+// cmd/api/main.go
+
 package main
 
 import (
@@ -17,6 +19,14 @@ func main() {
 	log.Println("========================================")
 	log.Println("🚀 [START] Aplikasi SI-BAPER mulai dinyalakan...")
 	log.Println("========================================")
+
+	// 👇 PERBAIKAN: Memastikan folder uploads/qrcodes selalu ada sebelum server berjalan
+	if err := os.MkdirAll("./uploads/qrcodes", os.ModePerm); err != nil {
+		log.Printf("⚠️ [WARNING] Gagal membuat direktori uploads/qrcodes: %v", err)
+	} else {
+		log.Println("✅ [STORAGE] Direktori uploads/qrcodes siap digunakan.")
+	}
+	// 👆 ------------------------------------------------------------------------ 👆
 
 	err := godotenv.Load()
 	if err != nil {

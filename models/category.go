@@ -1,3 +1,4 @@
+// models/category.go
 package models
 
 import "time"
